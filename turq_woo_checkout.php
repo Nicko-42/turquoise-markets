@@ -1320,9 +1320,10 @@ function woocommerce_checkout_order_processed_turq($order_id, $posted_data, $ord
 		}
 
 
-		// Clean _turq meta first
+		// Clean _turq meta first - except keys not rebuilt here
+		$keep_meta = [ '_turq_ticket_codes', '_turq_id_check', '_turq_age_declaration', '_turq_age_declaration_time', '_turq_age_declaration_text' ];
 		foreach ( $order->get_meta_data() as $meta ) {
-			if ( str_starts_with( $meta->key, '_turq' ) && $meta->key !== '_turq_ticket_codes' ) $order->delete_meta_data( $meta->key );
+			if ( str_starts_with( $meta->key, '_turq' ) && !in_array( $meta->key, $keep_meta, true ) ) $order->delete_meta_data( $meta->key );
 		}		
 		
 		// then add package summary data to order (no duplicates) for quick searching

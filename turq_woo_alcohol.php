@@ -225,13 +225,19 @@ function turq_alcohol_checkout_declaration() {
 
 	?>
 	<div class="turq-alcohol-declaration">
-		<p class="turq-alcohol-declaration__notice"><?= wp_kses_post(turq_alcohol_text('checkout_notice')) ?></p>
-		<p class="form-row validate-required" id="<?= TURQ_ALCOHOL_FIELD ?>_field">
-			<label class="woocommerce-form__label woocommerce-form__label-for-checkbox checkbox">
-				<input type="checkbox" class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox" name="<?= TURQ_ALCOHOL_FIELD ?>" id="<?= TURQ_ALCOHOL_FIELD ?>" value="1" <?php checked($checked) ?> />
-				<span><?= wp_kses_post(turq_alcohol_text('checkbox_label')) ?></span>&nbsp;<abbr class="required" title="required">*</abbr>
-			</label>
-		</p>
+		<div class="turq-alcohol-declaration__icon" aria-hidden="true">
+			<svg viewBox="0 0 48 48" focusable="false"><circle cx="24" cy="24" r="24" fill="#d63638"/><rect x="21" y="9" width="6" height="20" rx="3" fill="#fff"/><circle cx="24" cy="36.5" r="3.5" fill="#fff"/></svg>
+		</div>
+		<div class="turq-alcohol-declaration__body">
+			<p class="turq-alcohol-declaration__notice"><?= wp_kses_post(turq_alcohol_text('checkout_notice')) ?></p>
+			<p class="form-row validate-required" id="<?= TURQ_ALCOHOL_FIELD ?>_field">
+				<label class="woocommerce-form__label woocommerce-form__label-for-checkbox checkbox">
+					<input type="checkbox" class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox" name="<?= TURQ_ALCOHOL_FIELD ?>" id="<?= TURQ_ALCOHOL_FIELD ?>" value="1" <?php checked($checked) ?> />
+					<span><?= wp_kses_post(turq_alcohol_text('checkbox_label')) ?>&nbsp;<abbr class="required" title="required">*</abbr></span>
+				</label>
+				<span class="turq-alcohol-declaration__error" role="alert"><?= wp_kses_post(turq_alcohol_text('checkout_error')) ?></span>
+			</p>
+		</div>
 	</div>
 	<?php
 }
@@ -239,6 +245,7 @@ function turq_alcohol_checkout_declaration() {
 //
 // Server side validation
 // ----------------------
+// Error id is picked up by the checkout_error JS below to show the inline error.
 add_action('woocommerce_after_checkout_validation', 'turq_alcohol_checkout_validation', 10, 2);
 function turq_alcohol_checkout_validation($data, $errors) {
 	if (!turq_alcohol_cart_has_alcohol()) return;
@@ -295,22 +302,12 @@ function turq_alcohol_id_check_badge() {
 }
 
 //
-// Orders list column (HPOS)
-// -------------------------
-add_filter('manage_woocommerce_page_wc-orders_columns', function($columns) {
-	if (empty($columns)) return $columns;
-
-	$new_columns = [];
-	foreach ($columns as $column_name => $column_info) {
-		$new_columns[$column_name] = $column_info;
-		if ($column_name === 'order_number') $new_columns['turq_id_check'] = 'ID Check';
-	}
-	return $new_columns;
-}, 12);
-
+// Orders list - badge in Notes column (HPOS)
+// ------------------------------------------
+// Echoed before the notes output in turq_woo_orders.php (priority 99999999)
 add_action('manage_woocommerce_page_wc-orders_custom_column', function($column, $order) {
-	if ($column !== 'turq_id_check') return;
-	if (turq_alcohol_order_requires_id_check($order)) echo turq_alcohol_id_check_badge();
+	if ($column !== 'order_notes') return;
+	if (turq_alcohol_order_requires_id_check($order)) echo "<div class='turq-id-check-row'>".turq_alcohol_id_check_badge()."</div>";
 }, 10, 2);
 
 //
@@ -350,7 +347,7 @@ add_action('admin_head', function() {
 	if (!$screen || $screen->id !== wc_get_page_screen_id('shop-order')) return; ?>
 	<style>
 		.turq-id-check {display:inline-block; background:#d63638; color:#fff; font-weight:700; font-size:12px; line-height:1.6; padding:0 8px; border-radius:3px; white-space:nowrap; letter-spacing:.03em}
-		.column-turq_id_check {width:90px}
+		.turq-id-check-row {margin:0 0 4px}
 	</style> <?php
 });
 
@@ -411,14 +408,41 @@ function turq_alcohol_email_before_order_table($order, $sent_to_admin, $plain_te
 add_action('wp_head', function() {
 	if (!is_product() && !is_checkout()) return; ?>
 	<style id="turq-alcohol">
-		.turq-alcohol-notice {border-left:4px solid currentColor; padding:8px 12px; margin:0 0 1em; font-weight:600; overflow-wrap:anywhere}
-		.turq-alcohol-declaration {border:1px solid rgba(0,0,0,.15); padding:12px; margin:0 0 1em; border-radius:4px}
-		.turq-alcohol-declaration__notice {font-size:.9em; margin:0 0 .75em}
+		.turq-alcohol-notice {border-left:4px solid currentColor; padding:8px 12px; margin:1em 0; font-weight:600; overflow-wrap:anywhere;}
+		.turq-alcohol-declaration {display:flex; align-items:flex-start; gap:12px; border:1px solid rgba(0,0,0,.15); padding:12px; margin:1em 0; border-radius:4px; background-color: var(--wp--preset--color--kb-palette-4);}
+		.turq-alcohol-declaration__icon {flex:0 0 44px; width:44px; height:44px}
+		.turq-alcohol-declaration__icon svg {display:block; width:100%; height:100%}
+		.turq-alcohol-declaration__body {flex:1 1 auto; min-width:0; overflow-wrap:anywhere}
+		#main .turq-alcohol-declaration__notice {font-size:.9em; margin:0}
 		.turq-alcohol-declaration .form-row {margin:0; padding:0}
-		.turq-alcohol-declaration label.checkbox {display:flex; align-items:flex-start; gap:8px; font-weight:600; line-height:1.4}
+		#main .turq-alcohol-declaration label.checkbox {display:flex; align-items:flex-start; gap:8px; font-weight:600; line-height:1.4; margin:0.75em 0 0}
 		.turq-alcohol-declaration input[type="checkbox"] {flex:0 0 auto; margin:.2em 0 0; width:1.2em; height:1.2em}
+		.turq-alcohol-declaration__error {display:none; color:#e2401c; font-size:.9em; font-weight:600; margin-top:.5em}
 		.turq-alcohol-declaration .woocommerce-invalid label {color:#e2401c}
+		.turq-alcohol-declaration .woocommerce-invalid .turq-alcohol-declaration__error {display:block}
+		@media (max-width: 480px) {
+			.turq-alcohol-declaration {gap:10px; padding:10px}
+			.turq-alcohol-declaration__icon {flex-basis:32px; width:32px; height:32px}
+		}
 	</style> <?php
+});
+
+//
+// Inline error on failed checkout
+// -------------------------------
+// Woo adds the error id as data-id on the notice; flag our field so the inline
+// error shows. Woo's own field validation clears it again when the box is ticked.
+add_action('wp_footer', function() {
+	if (!is_checkout() || is_wc_endpoint_url()) return; ?>
+	<script id="turq-alcohol-js">
+	jQuery(function($){
+		$(document.body).on('checkout_error', function(){
+			if ($('[data-id="<?= TURQ_ALCOHOL_FIELD ?>"]').length) {
+				$('#<?= TURQ_ALCOHOL_FIELD ?>_field').addClass('woocommerce-invalid woocommerce-invalid-required-field');
+			}
+		});
+	});
+	</script> <?php
 });
 
 //}
