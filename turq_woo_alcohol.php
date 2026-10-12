@@ -263,7 +263,7 @@ function turq_alcohol_checkout_validation($data, $errors) {
 	if (empty($_POST[TURQ_ALCOHOL_FIELD]))
 		$errors->add(
 			'turq_age_declaration',
-			"<a href='#".TURQ_ALCOHOL_FIELD."_field'>".wp_kses_post(turq_alcohol_text('checkout_error'))."</a>",
+			wp_kses_post(turq_alcohol_text('checkout_error')),	// no <a> - Woo wraps errors with an id in a link to the field
 			['id' => TURQ_ALCOHOL_FIELD]
 		);
 }
