@@ -60,6 +60,7 @@ include_once ('turq_woo_orders.php');
 //include_once ('turq_woo_xero.php');
 include_once ('turq_woo_email.php');
 include_once ('turq_woo_coupons.php');
+include_once ('turq_woo_alcohol.php');
 
 
 add_filter('woocommerce_locate_template', 'woocommerce_locate_template_turq', 99999, 3);

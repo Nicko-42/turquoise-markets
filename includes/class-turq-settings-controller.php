@@ -17,6 +17,7 @@ require_once TURQ_PLUGIN_PATH . 'includes/settings/class-turq-section-checker.ph
 require_once TURQ_PLUGIN_PATH . 'includes/settings/class-turq-section-markets.php';
 require_once TURQ_PLUGIN_PATH . 'includes/settings/class-turq-section-orders.php';
 require_once TURQ_PLUGIN_PATH . 'includes/settings/class-turq-section-order-meta-editor.php';
+require_once TURQ_PLUGIN_PATH . 'includes/settings/class-turq-section-alcohol.php';
 
 class turq_Settings_Controller {
 
@@ -36,7 +37,8 @@ class turq_Settings_Controller {
 		$this->sections[] = new turq_Section_Checker($this->turq_Market_Setup);
 		$this->sections[] = new turq_Section_Markets($this->turq_Market_Setup);
 		$this->sections[] = new turq_Section_Orders($this->turq_Market_Setup);
-		$this->sections[] = new turq_Section_Order_Meta_Editor($this->turq_Market_Setup);		
+		$this->sections[] = new turq_Section_Order_Meta_Editor($this->turq_Market_Setup);
+		$this->sections[] = new turq_Section_Alcohol();
 
         // Let each section register its own AJAX hooks
         foreach ($this->sections as $section) {
