@@ -13,7 +13,8 @@
  *  - Declaration (and time given) saved with the order
  *  - ID CHECK flag on any order containing alcohol, incl. admin created/edited
  *  - ID CHECK shown in admin order list, order edit page, admin New order email
- *  - Reminder in customer Processing / On-hold emails (HTML + plain text)
+ *  - Reminder in customer Processing / On-hold / Invoice emails (HTML + plain text)
+ *    and on the Thank you page
  *
  * Texts are configurable : WooCommerce > Settings > TSP Settings > Alcohol
  * (includes/settings/class-turq-section-alcohol.php)
@@ -202,6 +203,15 @@ add_shortcode('turq_alcohol_notice', function() {
 ////////////////////////////////////////////////////////////////////////////////{
 
 //
+// Red exclamation icon - left column of the declaration / thank you boxes
+// -----------------------------------------------------------------------
+function turq_alcohol_icon() {
+	return '<div class="turq-alcohol-declaration__icon" aria-hidden="true">'.
+			'<svg viewBox="0 0 48 48" focusable="false"><circle cx="24" cy="24" r="24" fill="#d63638"/><rect x="21" y="9" width="6" height="20" rx="3" fill="#fff"/><circle cx="24" cy="36.5" r="3.5" fill="#fff"/></svg>'.
+			'</div>';
+}
+
+//
 // Notice + declaration checkbox
 // -----------------------------
 // Rendered just above Place order. This area is refreshed by Woo on every
@@ -225,9 +235,7 @@ function turq_alcohol_checkout_declaration() {
 
 	?>
 	<div class="turq-alcohol-declaration">
-		<div class="turq-alcohol-declaration__icon" aria-hidden="true">
-			<svg viewBox="0 0 48 48" focusable="false"><circle cx="24" cy="24" r="24" fill="#d63638"/><rect x="21" y="9" width="6" height="20" rx="3" fill="#fff"/><circle cx="24" cy="36.5" r="3.5" fill="#fff"/></svg>
-		</div>
+		<?= turq_alcohol_icon() ?>
 		<div class="turq-alcohol-declaration__body">
 			<p class="turq-alcohol-declaration__notice"><?= wp_kses_post(turq_alcohol_text('checkout_notice')) ?></p>
 			<p class="form-row validate-required" id="<?= TURQ_ALCOHOL_FIELD ?>_field">
@@ -245,7 +253,9 @@ function turq_alcohol_checkout_declaration() {
 //
 // Server side validation
 // ----------------------
-// Error id is picked up by the checkout_error JS below to show the inline error.
+// Woo's checkout.js uses the error 'id' to flag our field woocommerce-invalid,
+// which shows our inline error (CSS). Woo also inserts its own inline copy
+// (.checkout-inline-error-message) - hidden by CSS as ours tracks the tick better.
 add_action('woocommerce_after_checkout_validation', 'turq_alcohol_checkout_validation', 10, 2);
 function turq_alcohol_checkout_validation($data, $errors) {
 	if (!turq_alcohol_cart_has_alcohol()) return;
@@ -270,6 +280,18 @@ function turq_alcohol_checkout_create_order($order, $data) {
 	$order->update_meta_data('_turq_age_declaration_time',	time());
 	$order->update_meta_data('_turq_age_declaration_text',	wp_strip_all_tags(turq_alcohol_text('checkbox_label')));
 }
+
+//
+// Thank you page reminder
+// -----------------------
+// After the Package summary (turq_woo_checkout.php, priority 999999)
+add_action('woocommerce_thankyou', function($order_id) {
+	$order = wc_get_order($order_id);
+	if (!turq_alcohol_order_requires_id_check($order)) return;
+
+	echo "<div class='turq-alcohol-declaration turq-alcohol-thankyou' role='note'>".turq_alcohol_icon();
+	echo "<div class='turq-alcohol-declaration__body'><p>".wp_kses_post(turq_alcohol_text('email_reminder'))."</p></div></div>";
+}, 9999999);
 
 //}
 
@@ -385,9 +407,9 @@ function turq_alcohol_email_before_order_table($order, $sent_to_admin, $plain_te
 	}
 
 	//
-	// Customer Processing / On-hold - ID reminder
-	// -------------------------------------------
-	if (in_array($email->id, ['customer_processing_order', 'customer_on_hold_order'], true)) {
+	// Customer Processing / On-hold / Invoice - ID reminder
+	// ----------------------------------------------------
+	if (in_array($email->id, ['customer_processing_order', 'customer_on_hold_order', 'customer_invoice'], true)) {
 		$reminder = turq_alcohol_text('email_reminder');
 
 		if ($plain_text) {
@@ -420,29 +442,13 @@ add_action('wp_head', function() {
 		.turq-alcohol-declaration__error {display:none; color:#e2401c; font-size:.9em; font-weight:600; margin-top:.5em}
 		.turq-alcohol-declaration .woocommerce-invalid label {color:#e2401c}
 		.turq-alcohol-declaration .woocommerce-invalid .turq-alcohol-declaration__error {display:block}
+		.turq-alcohol-declaration .checkout-inline-error-message {display:none}
+		#main .turq-alcohol-thankyou p {margin:0; font-weight:600}
 		@media (max-width: 480px) {
 			.turq-alcohol-declaration {gap:10px; padding:10px}
 			.turq-alcohol-declaration__icon {flex-basis:32px; width:32px; height:32px}
 		}
 	</style> <?php
-});
-
-//
-// Inline error on failed checkout
-// -------------------------------
-// Woo adds the error id as data-id on the notice; flag our field so the inline
-// error shows. Woo's own field validation clears it again when the box is ticked.
-add_action('wp_footer', function() {
-	if (!is_checkout() || is_wc_endpoint_url()) return; ?>
-	<script id="turq-alcohol-js">
-	jQuery(function($){
-		$(document.body).on('checkout_error', function(){
-			if ($('[data-id="<?= TURQ_ALCOHOL_FIELD ?>"]').length) {
-				$('#<?= TURQ_ALCOHOL_FIELD ?>_field').addClass('woocommerce-invalid woocommerce-invalid-required-field');
-			}
-		});
-	});
-	</script> <?php
 });
 
 //}

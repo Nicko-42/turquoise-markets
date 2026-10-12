@@ -12,7 +12,7 @@ class turq_Section_Alcohol extends turq_Settings_Section_Base {
 		'checkout_notice'	=> ['label' => 'Checkout legal notice',	'rows' => 3, 'desc' => 'Shown above the declaration checkbox when the basket contains alcohol.'],
 		'checkbox_label'	=> ['label' => 'Declaration checkbox',	'rows' => 2, 'desc' => 'The customer must tick this to place the order. This wording is saved with the order.'],
 		'checkout_error'	=> ['label' => 'Checkout error',		'rows' => 2, 'desc' => 'Shown if the order is placed without ticking the declaration.'],
-		'email_reminder'	=> ['label' => 'Customer email reminder', 'rows' => 2, 'desc' => 'Added to the customer Processing and On-hold order emails.'],
+		'email_reminder'	=> ['label' => 'Customer ID reminder', 'rows' => 2, 'desc' => 'Added to the customer Processing, On-hold and Invoice emails, and the Thank you page.'],
 	];
 
     public function get_id() {
