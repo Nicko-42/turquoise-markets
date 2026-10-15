@@ -235,8 +235,12 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 			if (($method == 'p' || $method == 's') && empty($pkg['_turq_local_option_date'])) $complete = false;
 
 			foreach ($pkg as $key => $value) {
-				if (in_array($key, self::PACKAGE_ONLY_KEYS, true) || !is_scalar($value)) continue;
-				$summary[$key][] = $value;
+				if (!is_scalar($value)) continue;
+
+				// market_id IS summarised for collection packages, so the order list can filter by market
+				// (for 's' it is the delivery row key, not a market post ID) - matches the Package Backfill section
+				$summarise = !in_array($key, self::PACKAGE_ONLY_KEYS, true) || ($key === '_turq_local_option_market_id' && $method === 'p');
+				if ($summarise) $summary[$key][] = $value;
 			}
 		}
 
