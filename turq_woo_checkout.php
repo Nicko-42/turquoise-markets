@@ -1202,6 +1202,15 @@ add_action( 'woocommerce_order_action_check_ticket_codes', function( $order ) {
  *
  * @return void Persists package metadata, ticket codes, and order summary data.
  */
+/**
+ * Order meta keys that make up the package SUMMARY - deleted and rebuilt from the packages
+ * at checkout and by the Order Meta Editor. Any other '_turq...' order meta (ticket codes,
+ * age declaration, id check...) belongs to another feature and must never be touched here.
+ */
+function turq_is_summary_meta_key($key) {
+	return $key === '_turq_package_count' || str_starts_with($key, '_turq_local_option');
+}
+
 add_action('woocommerce_checkout_order_processed', 'woocommerce_checkout_order_processed_turq', 20, 3);
 function woocommerce_checkout_order_processed_turq($order_id, $posted_data, $order) {
 
@@ -1307,7 +1316,10 @@ function woocommerce_checkout_order_processed_turq($order_id, $posted_data, $ord
 
 					$push_meta('_turq_local_option', $tlo);
 					$push_meta('_turq_local_option_tag_id', $row['tag_id']);
-					$pkgmeta['_turq_local_option_market_id'] = $primary;					
+					// market post ID also goes in the order summary for collections (order list market filter),
+					// for deliveries it is the delivery row key so package only
+					if ($method_name == 'p')	$push_meta('_turq_local_option_market_id', $primary);
+					else						$pkgmeta['_turq_local_option_market_id'] = $primary;
 					
 					foreach ($opt as $key => $value) $push_meta('_turq_local_option_'.$key, $value);
 					
@@ -1320,10 +1332,10 @@ function woocommerce_checkout_order_processed_turq($order_id, $posted_data, $ord
 		}
 
 
-		// Clean _turq meta first
+		// Clean summary meta first - only the keys rebuilt here, see turq_is_summary_meta_key()
 		foreach ( $order->get_meta_data() as $meta ) {
-			if ( str_starts_with( $meta->key, '_turq' ) && $meta->key !== '_turq_ticket_codes' ) $order->delete_meta_data( $meta->key );
-		}		
+			if ( turq_is_summary_meta_key( $meta->key ) ) $order->delete_meta_data( $meta->key );
+		}
 		
 		// then add package summary data to order (no duplicates) for quick searching
 		foreach ( $order_meta as $key => $data ) {

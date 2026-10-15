@@ -266,10 +266,9 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 		return false;
 	}
 
-	// the order meta this editor owns - anything else '_turq...' (ticket codes, age declaration, id check, ...)
-	// belongs to other features and is never deleted or compared here
+	// same rule as checkout, see turq_is_summary_meta_key() in turq_woo_checkout.php
 	private function is_summary_key($key) {
-		return $key === '_turq_package_count' || str_starts_with($key, '_turq_local_option');
+		return turq_is_summary_meta_key($key);
 	}
 
 	private function rebuild_order_summary($order) {
