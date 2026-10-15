@@ -123,6 +123,15 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 		return null;
 	}
 
+	// "Click & Collect" -> "Click &amp; Collect", as stored in the group label (WP term name)
+	private function canonical_group_label($value) {
+		$plain = wp_specialchars_decode((string)$value, ENT_QUOTES);
+		foreach ($this->turq_Market_Setup->get_multi_shipping_groups() as $group) {
+			if (wp_specialchars_decode((string)$group['label'], ENT_QUOTES) === $plain) return $group['label'];
+		}
+		return $value;
+	}
+
 	// returns false for an invalid date
 	private function sanitize_field($key, $raw) {
 		$raw = is_scalar($raw) ? trim((string)$raw) : '';
@@ -563,7 +572,8 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 				 . '<div class="ome-date-text">'.esc_html($text).'</div>';
 		}
 
-		return '<input type="text" class="ome-input" data-key="'.esc_attr($key).'" value="'.esc_attr($value).'">';
+		// decode first - esc_attr() alone leaves an existing "&amp;" as is, so the input would show the raw entity
+		return '<input type="text" class="ome-input" data-key="'.esc_attr($key).'" value="'.esc_attr(wp_specialchars_decode((string)$value, ENT_QUOTES)).'">';
 	}
 
 	private function render_assets($base_url) {
@@ -602,6 +612,14 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 			// Using the browser timezone would shift times by an hour during BST.
 
 			// 1726531200 -> "2024-09-17T00:00" (datetime-local input value)
+			// WP stores term (group) names HTML encoded, e.g. "Click &amp; Collect" - show them as plain text
+			function decodeEntities(value) {
+				if (typeof value !== 'string') return value;
+				const t = document.createElement('textarea');
+				t.innerHTML = value;
+				return t.value;
+			}
+
 			function tsToInput(ts) {
 				if (ts === '' || ts === null || isNaN(ts)) return '';
 				return new Date(ts * 1000).toISOString().slice(0, 16);
@@ -701,7 +719,7 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 					// no visible input for this key on this package - keep it in a hidden one
 					if (!$input.length) $input = $('<input type="hidden" class="ome-input ome-added">').attr('data-key', key).appendTo($tr.find('.ome-other'));
 
-					$input.val($input.data('type') === 'date' ? tsToInput(value) : value).addClass('ome-from-choice');
+					$input.val($input.data('type') === 'date' ? tsToInput(value) : decodeEntities(value)).addClass('ome-from-choice');
 					markDirty($input);
 				});
 			}
@@ -851,6 +869,9 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 
 				$value = $this->sanitize_field($key, $fields[$key]);
 				if ($value === false) wp_send_json_error(['message' => "Invalid date for $key on order #".$order->get_id()]);
+
+				// name must match the stored group label exactly (HTML encoded), it is the group colour lookup key
+				if ($key === '_turq_local_option_name') $value = $this->canonical_group_label($value);
 
 				$pkg[$key] = $value;
 			}
