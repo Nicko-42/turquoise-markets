@@ -24,7 +24,8 @@ $turq_Market_Setup = turq_Market_Setup();
 
 function turq_Market_Setup() { return turq_Market_Setup::instance(); }
 
-if (is_admin() && !wp_doing_ajax()) {
+// also load for admin-ajax.php, the settings sections register their wp_ajax_* handlers in here
+if (is_admin()) {
     require_once TURQ_PLUGIN_PATH . 'includes/class-turq-market-admin.php';
     new turq_Market_Admin($turq_Market_Setup);
 }
