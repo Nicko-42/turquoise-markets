@@ -266,12 +266,18 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 		return false;
 	}
 
+	// the order meta this editor owns - anything else '_turq...' (ticket codes, age declaration, id check, ...)
+	// belongs to other features and is never deleted or compared here
+	private function is_summary_key($key) {
+		return $key === '_turq_package_count' || str_starts_with($key, '_turq_local_option');
+	}
+
 	private function rebuild_order_summary($order) {
 		// never touch legacy orders that only have order level meta
 		if (!$this->has_package_data($order)) return;
 
 		foreach ($order->get_meta_data() as $meta) {
-			if (str_starts_with($meta->key, '_turq') && $meta->key !== '_turq_ticket_codes') $order->delete_meta_data($meta->key);
+			if ($this->is_summary_key($meta->key)) $order->delete_meta_data($meta->key);
 		}
 
 		foreach ($this->build_summary($order) as $key => $values) {
@@ -287,7 +293,7 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 
 		$actual = [];
 		foreach ($order->get_meta_data() as $meta) {
-			if (str_starts_with($meta->key, '_turq') && $meta->key !== '_turq_ticket_codes')
+			if ($this->is_summary_key($meta->key))
 				$actual[] = $meta->key.'='.(is_scalar($meta->value) ? $meta->value : wp_json_encode($meta->value));
 		}
 
