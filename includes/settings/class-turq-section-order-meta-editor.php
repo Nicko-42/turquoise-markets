@@ -637,12 +637,13 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 				const $date   = $tr.find('.ome-choice-date').empty();
 				const current = inputFor($tr, '_turq_local_option_date').val();
 
-				$date.append($('<option>').val('').text('— keep current —'));
+				const match   = choice && choice.dates.find(d => tsToInput(d.fields._turq_local_option_date) === current);
+
+				// current date no longer offered (past cut off etc.) - show it, rather than a blank "keep current"
+				$date.append($('<option>').val('').text(match ? '— keep current —' : ($tr.data('orig-date-text') || '— keep current —')));
 				if (!choice) return;
 
 				choice.dates.forEach(d => $date.append($('<option>').val(d.value).text(d.label)));
-
-				const match = choice.dates.find(d => tsToInput(d.fields._turq_local_option_date) === current);
 				if (match) $date.val(match.value);
 			}
 
@@ -653,10 +654,20 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 
 				const list    = getChoices($tr);
 				const current = String(inputFor($tr, '_turq_local_option_market_id').val() || '');
+				const label   = String(inputFor($tr, '_turq_local_option').val() || '');
+				const date    = inputFor($tr, '_turq_local_option_date').val();
+				const offered = list.some(c => c.value === current);
 
-				$primary.empty().append($('<option>').val('').text(list.length ? '— keep current —' : '— no current options —'));
+				// text for the "keep current" options when the saved value is not (or no longer) offered
+				// e.g. "Cliffe Hall, Lewes (current)" and "Thu 16-07-26 (current - not offered)"
+				const currentText = $tr.data('method') === 'p' ? label.replace(/ - \w{3} \d\d-\d\d-\d\d$/, '') : label;
+				$tr.data('orig-date-text', date ? inputToText(date).slice(0, 12) + ' (current - not offered)' : '');
+
+				$primary.empty().append($('<option>').val('').text(
+					offered || !currentText ? (list.length ? '— keep current —' : '— no current options —') : currentText + ' (current - not offered)'
+				));
 				list.forEach(c => $primary.append($('<option>').val(c.value).text(c.label)));
-				if (list.some(c => c.value === current)) $primary.val(current);
+				if (offered) $primary.val(current);
 
 				fillDates($tr, findChoice($tr));
 
