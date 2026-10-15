@@ -655,6 +655,27 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 				if (list.some(c => c.value === current)) $primary.val(current);
 
 				fillDates($tr, findChoice($tr));
+
+				// remember the starting values so "keep current" can put them back
+				$tr.data('orig-choice', $primary.val());
+				$tr.find('.ome-input').each(function(){ $(this).data('orig', $(this).val()); });
+			}
+
+			// "keep current" chosen - undo everything the selects changed and go back to the saved values
+			function revertChoice($tr) {
+				$tr.find('.ome-input.ome-added').remove();
+				$tr.find('.ome-input.ome-from-choice').each(function(){
+					const $input = $(this);
+					$input.val($input.data('orig')).removeClass('ome-from-choice ome-dirty');
+					if ($input.data('type') === 'date') $input.siblings('.ome-date-text').text(inputToText($input.val()));
+				});
+
+				$tr.find('.ome-choice-primary').val($tr.data('orig-choice'));
+				fillDates($tr, findChoice($tr));
+
+				// clear the order highlight if nothing else is left changed
+				const $rows = $wrap.find('tr[data-order-id="' + $tr.data('order-id') + '"]');
+				if (!$rows.find('.ome-dirty').length) $rows.removeClass('ome-row-changed');
 			}
 
 			// copy a choice's values into the row inputs, so what is saved is what is shown
@@ -663,9 +684,9 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 					let $input = inputFor($tr, key);
 
 					// no visible input for this key on this package - keep it in a hidden one
-					if (!$input.length) $input = $('<input type="hidden" class="ome-input">').attr('data-key', key).appendTo($tr.find('.ome-other'));
+					if (!$input.length) $input = $('<input type="hidden" class="ome-input ome-added">').attr('data-key', key).appendTo($tr.find('.ome-other'));
 
-					$input.val($input.data('type') === 'date' ? tsToInput(value) : value);
+					$input.val($input.data('type') === 'date' ? tsToInput(value) : value).addClass('ome-from-choice');
 					markDirty($input);
 				});
 			}
@@ -680,8 +701,9 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 				const $tr    = $(this).closest('tr');
 				const choice = findChoice($tr);
 
+				if (!choice) return revertChoice($tr);
+
 				fillDates($tr, choice);
-				if (!choice) return;
 
 				// new market chosen - default to its first date (delivery options only have one)
 				$tr.find('.ome-choice-date').val(choice.dates[0].value);
@@ -692,7 +714,9 @@ class turq_Section_Order_Meta_Editor extends turq_Settings_Section_Base {
 				const $tr    = $(this).closest('tr');
 				const choice = findChoice($tr);
 				const date   = choice && choice.dates.find(d => d.value === this.value);
+
 				if (date) applyFields($tr, date.fields);
+				else revertChoice($tr);
 			});
 
 			// manual edits
